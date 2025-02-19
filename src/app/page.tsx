@@ -191,6 +191,8 @@ const AppleJWSGenerator = () => {
                           setPayload(formatted);
                         } catch (e) {
                           // 如果不是有效的 JSON 則不處理
+                          console.log(e);
+                          
                         }
                       }}
                     >
