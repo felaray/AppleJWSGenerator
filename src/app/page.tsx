@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Check } from 'lucide-react';
+import { Upload, Check, Github, Globe, Info } from 'lucide-react';
+import { LocaleSwitcher } from '@/components/locale-switcher';
+import { translations, type LocaleKey } from '@/i18n/locales';
 
 const AppleJWSGenerator = () => {
+  const [locale, setLocale] = useState<LocaleKey>('zh-TW');
   const [files, setFiles] = useState<{
     leafCert: File | null;
     intermediateCert: File | null;
@@ -22,6 +25,8 @@ const AppleJWSGenerator = () => {
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const t = translations[locale];
 
   // Base64Url encoding function
   const base64UrlEncode = (str: string | ArrayBuffer): string => {
@@ -140,13 +145,23 @@ const AppleJWSGenerator = () => {
   return (
     <div className="container mx-auto py-8">
       <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Apple JWS Generator</CardTitle>
+        <CardHeader className="text-center relative">
+          <div className="absolute right-4 top-4 flex gap-2">
+            <LocaleSwitcher currentLocale={locale} onLocaleChange={setLocale} />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.open('https://github.com/felaray/AppleJWSGenerator', '_blank')}
+            >
+              <Github className="h-5 w-5" />
+            </Button>
+          </div>
+          <CardTitle className="text-2xl font-bold">{t.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">憑證檔案</h3>
+              <h3 className="text-lg font-semibold">{t.certificates}</h3>
               <div className="space-y-3">
                 {[
                   { type: 'leafCert', label: 'Leaf Certificate (PEM)' },
@@ -160,7 +175,7 @@ const AppleJWSGenerator = () => {
                         <Upload className="h-5 w-5 text-muted-foreground" />
                         <span className="text-sm font-medium">{item.label}</span>
                         <span className="text-xs text-muted-foreground">
-                          {files[item.type as keyof typeof files]?.name || '點擊或拖放檔案'}
+                          {files[item.type as keyof typeof files]?.name || t.dropOrClick}
                         </span>
                         <input
                           type="file"
@@ -176,7 +191,7 @@ const AppleJWSGenerator = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Payload & 結果</h3>
+              <h3 className="text-lg font-semibold">{t.payloadAndResult}</h3>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -190,20 +205,18 @@ const AppleJWSGenerator = () => {
                           const formatted = JSON.stringify(JSON.parse(payload), null, 2);
                           setPayload(formatted);
                         } catch (e) {
-                          // 如果不是有效的 JSON 則不處理
                           console.log(e);
-                          
                         }
                       }}
                     >
-                      格式化 JSON
+                      {t.formatJson}
                     </Button>
                   </div>
                   <textarea
                     value={payload}
                     onChange={(e) => setPayload(e.target.value)}
                     className="w-full h-[150px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-primary/50 font-mono"
-                    placeholder="輸入要簽署的 JSON"
+                    placeholder={t.inputJson}
                   />
                 </div>
 
@@ -212,7 +225,7 @@ const AppleJWSGenerator = () => {
                   className="w-full h-12 text-base"
                 >
                   <Upload className="mr-2 h-5 w-5" />
-                  產生 JWS
+                  {t.generateJws}
                 </Button>
 
                 {error && (
@@ -223,7 +236,7 @@ const AppleJWSGenerator = () => {
 
                 {result && (
                   <div>
-                    <label className="block text-sm font-medium mb-2">產生的 JWS</label>
+                    <label className="block text-sm font-medium mb-2">{t.generatedJws}</label>
                     <textarea
                       value={result}
                       readOnly
@@ -239,10 +252,10 @@ const AppleJWSGenerator = () => {
                         {copied ? (
                           <>
                             <Check className="mr-2 h-4 w-4" />
-                            已複製
+                            {t.copied}
                           </>
                         ) : (
-                          '複製 JWS'
+                          t.copy
                         )}
                       </Button>
                       <Button
@@ -251,7 +264,7 @@ const AppleJWSGenerator = () => {
                         className="flex-1"
                         onClick={() => window.open(`https://jwt.io/#debugger-io?token=${result}`, '_blank')}
                       >
-                        在 JWT.io 中檢視
+                        {t.viewInJwtIo}
                       </Button>
                     </div>
                   </div>
