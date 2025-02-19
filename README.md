@@ -1,28 +1,42 @@
-# gogogo
+# Apple JWS Generator
 
-## Getting Started
+一個基於 Next.js 的 Apple JWS (JSON Web Signature) 生成工具，用於產生符合 Apple 規範的 JWS 格式。
 
-First, run the development server:
+## 功能特點
 
-```bash
-npm run dev
-```
+* 支援上傳憑證鏈（Leaf、Intermediate、Root 憑證）
+* 支援 PKCS#8 格式的私鑰
+* 使用 ES256 演算法進行簽章
+* 即時錯誤提示
+* 支援自定義 Payload
+* 提供 Base64URL 編碼的 JWS 輸出
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 技術實現
 
-## Features
+* 使用 Web Crypto API 進行密碼學操作
+* 支援 PEM 格式憑證解析
+* shadcn/ui 元件庫提供現代化 UI
+* TypeScript 確保型別安全
+* 純前端實現，無需後端服務
 
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- shadcn/ui components
-- Dark mode support
-- ESLint configuration
-- Production-ready setup
+## 使用說明
 
-## Available Scripts
+1. 上傳所需的憑證檔案：
+   * Leaf Certificate (PEM 格式)
+   * Intermediate Certificate (PEM 格式)
+   * Root Certificate (PEM 格式)
+   * Private Key (PKCS#8/PEM 格式)
+2. 在 Payload 欄位輸入要簽署的 JSON 內容
+3. 點擊 "Generate JWS" 按鈕產生簽章
+4. 簽章結果會以 `header.payload.signature` 格式顯示
 
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run start`: Start production server
-- `npm run lint`: Run ESLint
+## 本地開發
+
+在瀏覽器中開啟 `http://localhost:3000` 即可使用。
+
+## 注意事項
+
+* 所有檔案處理均在瀏覽器端完成，不會上傳到伺服器
+* 請確保私鑰的安全性
+* 支援的檔案格式：`.pem`、`.cert`、`.crt`、`.p8`
+* 請確保憑證鏈的完整性和正確性
