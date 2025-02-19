@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Check, Github, Globe, Info } from 'lucide-react';
+import { Upload, Check, Github } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { translations, type LocaleKey } from '@/i18n/locales';
 
