@@ -1,101 +1,218 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Upload } from 'lucide-react';
+
+const AppleJWSGenerator = () => {
+  const [files, setFiles] = useState<{
+    leafCert: File | null;
+    intermediateCert: File | null;
+    rootCert: File | null;
+    privateKey: File | null;
+  }>({
+    leafCert: null,
+    intermediateCert: null,
+    rootCert: null,
+    privateKey: null,
+  });
+  const [payload, setPayload] = useState('');
+  const [result, setResult] = useState('');
+  const [error, setError] = useState('');
+
+  // Base64Url encoding function
+  const base64UrlEncode = (str: string | ArrayBuffer): string => {
+    let base64 = '';
+    if (typeof str === 'string') {
+      base64 = btoa(str);
+    } else {
+      const bytes = new Uint8Array(str);
+      const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), '');
+      base64 = btoa(binary);
+    }
+    return base64
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  };
+
+  // Read file as text
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+
+  // Format PEM certificate by removing headers, footers, and whitespace
+  const formatCertificate = (cert: string): string => {
+    return cert
+      .replace(/-----BEGIN CERTIFICATE-----/, '')
+      .replace(/-----END CERTIFICATE-----/, '')
+      .replace(/\s/g, '');
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, fileType: keyof typeof files) => {
+    const file = event.target.files?.[0] || null;
+    setFiles(prev => ({ ...prev, [fileType]: file }));
+  };
+
+  const generateJWS = async () => {
+    try {
+      setError('');
+      
+      // Check if all files are uploaded
+      if (!files.leafCert || !files.intermediateCert || !files.rootCert || !files.privateKey) {
+        throw new Error('請上傳所有必要的檔案');
+      }
+
+      // Read and format certificates
+      const certChain = await Promise.all([
+        readFileAsText(files.leafCert).then(formatCertificate),
+        readFileAsText(files.intermediateCert).then(formatCertificate),
+        readFileAsText(files.rootCert).then(formatCertificate),
+      ]);
+
+      // Create header
+      const header = {
+        alg: 'ES256',
+        x5c: certChain
+      };
+
+      // Convert header and payload to base64url
+      const headerBase64 = base64UrlEncode(JSON.stringify(header));
+      const payloadBase64 = base64UrlEncode(payload);
+      const dataToSign = `${headerBase64}.${payloadBase64}`;
+
+      // Read private key
+      const privateKeyContent = await readFileAsText(files.privateKey);
+      
+      // Use Web Crypto API to import private key and sign
+      const privateKeyDer = window.atob(privateKeyContent
+        .replace(/-----BEGIN PRIVATE KEY-----/, '')
+        .replace(/-----END PRIVATE KEY-----/, '')
+        .replace(/\s/g, ''));
+      
+      const keyData = new Uint8Array(privateKeyDer.length)
+        .map((_, i) => privateKeyDer.charCodeAt(i));
+
+      const privateKey = await window.crypto.subtle.importKey(
+        'pkcs8',
+        keyData,
+        {
+          name: 'ECDSA',
+          namedCurve: 'P-256'
+        },
+        false,
+        ['sign']
+      );
+
+      // Sign the data
+      const signature = await window.crypto.subtle.sign(
+        {
+          name: 'ECDSA',
+          hash: { name: 'SHA-256' },
+        },
+        privateKey,
+        new TextEncoder().encode(dataToSign)
+      );
+
+      const signatureBase64 = base64UrlEncode(signature);
+      const jws = `${headerBase64}.${payloadBase64}.${signatureBase64}`;
+      
+      setResult(jws);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '處理過程發生錯誤');
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <Card className="w-full max-w-2xl">
+      <CardHeader>
+        <CardTitle>Apple JWS Generator</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Leaf Certificate (PEM)</label>
+          <input
+            type="file"
+            onChange={(e) => handleFileChange(e, 'leafCert')}
+            className="w-full"
+            accept=".pem,.cert,.crt"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Intermediate Certificate (PEM)</label>
+          <input
+            type="file"
+            onChange={(e) => handleFileChange(e, 'intermediateCert')}
+            className="w-full"
+            accept=".pem,.cert,.crt"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Root Certificate (PEM)</label>
+          <input
+            type="file"
+            onChange={(e) => handleFileChange(e, 'rootCert')}
+            className="w-full"
+            accept=".pem,.cert,.crt"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Private Key (P8/PEM)</label>
+          <input
+            type="file"
+            onChange={(e) => handleFileChange(e, 'privateKey')}
+            className="w-full"
+            accept=".p8,.pem"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Payload (JSON)</label>
+          <textarea
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+            className="w-full h-32 p-2 border rounded"
+            placeholder="Enter your payload JSON here"
+          />
+        </div>
+
+        <Button 
+          onClick={generateJWS}
+          className="w-full"
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Generate JWS
+        </Button>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {result && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Generated JWS</label>
+            <textarea
+              value={result}
+              readOnly
+              className="w-full h-32 p-2 border rounded bg-gray-50"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+};
+
+export default AppleJWSGenerator;
