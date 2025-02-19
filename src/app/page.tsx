@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload } from 'lucide-react';
+import { Upload, Check } from 'lucide-react';
 
 const AppleJWSGenerator = () => {
   const [files, setFiles] = useState<{
@@ -21,6 +21,7 @@ const AppleJWSGenerator = () => {
   const [payload, setPayload] = useState('');
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Base64Url encoding function
   const base64UrlEncode = (str: string | ArrayBuffer): string => {
@@ -130,88 +131,135 @@ const AppleJWSGenerator = () => {
     }
   };
 
+  const handleCopy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle>Apple JWS Generator</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Leaf Certificate (PEM)</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'leafCert')}
-            className="w-full"
-            accept=".pem,.cert,.crt"
-          />
-        </div>
+    <div className="container mx-auto py-8">
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Apple JWS Generator</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">憑證檔案</h3>
+              <div className="space-y-3">
+                {[
+                  { type: 'leafCert', label: 'Leaf Certificate (PEM)' },
+                  { type: 'intermediateCert', label: 'Intermediate Certificate (PEM)' },
+                  { type: 'rootCert', label: 'Root Certificate (PEM)' },
+                  { type: 'privateKey', label: 'Private Key (P8/PEM)' }
+                ].map((item) => (
+                  <div key={item.type} className="relative">
+                    <div className="border-2 border-dashed rounded-lg p-3 hover:border-primary/50 transition-colors">
+                      <label className="flex flex-col items-center gap-1.5 cursor-pointer">
+                        <Upload className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{item.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {files[item.type as keyof typeof files]?.name || '點擊或拖放檔案'}
+                        </span>
+                        <input
+                          type="file"
+                          onChange={(e) => handleFileChange(e, item.type as keyof typeof files)}
+                          accept=".pem,.cert,.crt,.p8"
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Intermediate Certificate (PEM)</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'intermediateCert')}
-            className="w-full"
-            accept=".pem,.cert,.crt"
-          />
-        </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Payload & 結果</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">Payload (JSON)</label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        try {
+                          const formatted = JSON.stringify(JSON.parse(payload), null, 2);
+                          setPayload(formatted);
+                        } catch (e) {
+                          // 如果不是有效的 JSON 則不處理
+                        }
+                      }}
+                    >
+                      格式化 JSON
+                    </Button>
+                  </div>
+                  <textarea
+                    value={payload}
+                    onChange={(e) => setPayload(e.target.value)}
+                    className="w-full h-[150px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-primary/50 font-mono"
+                    placeholder="輸入要簽署的 JSON"
+                  />
+                </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Root Certificate (PEM)</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'rootCert')}
-            className="w-full"
-            accept=".pem,.cert,.crt"
-          />
-        </div>
+                <Button 
+                  onClick={generateJWS}
+                  className="w-full h-12 text-base"
+                >
+                  <Upload className="mr-2 h-5 w-5" />
+                  產生 JWS
+                </Button>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Private Key (P8/PEM)</label>
-          <input
-            type="file"
-            onChange={(e) => handleFileChange(e, 'privateKey')}
-            className="w-full"
-            accept=".p8,.pem"
-          />
-        </div>
+                {error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Payload (JSON)</label>
-          <textarea
-            value={payload}
-            onChange={(e) => setPayload(e.target.value)}
-            className="w-full h-32 p-2 border rounded"
-            placeholder="Enter your payload JSON here"
-          />
-        </div>
-
-        <Button 
-          onClick={generateJWS}
-          className="w-full"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          Generate JWS
-        </Button>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {result && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Generated JWS</label>
-            <textarea
-              value={result}
-              readOnly
-              className="w-full h-32 p-2 border rounded bg-gray-50"
-            />
+                {result && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">產生的 JWS</label>
+                    <textarea
+                      value={result}
+                      readOnly
+                      className="w-full h-[150px] p-3 text-sm bg-muted rounded-lg font-mono"
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className={`flex-1 transition-all duration-200 ${copied ? 'bg-green-600' : ''}`}
+                        onClick={() => handleCopy(result)}
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            已複製
+                          </>
+                        ) : (
+                          '複製 JWS'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => window.open(`https://jwt.io/#debugger-io?token=${result}`, '_blank')}
+                      >
+                        在 JWT.io 中檢視
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

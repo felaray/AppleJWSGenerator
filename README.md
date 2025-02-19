@@ -2,6 +2,20 @@
 
 一個基於 Next.js 的 Apple JWS (JSON Web Signature) 生成工具，用於產生符合 Apple 規範的 JWS 格式。
 
+## 📱 線上展示
+
+Demo : https://gray-glacier-0b1b6c310.4.azurestaticapps.net/
+
+## 🔐 安全性說明
+
+本工具採用純前端實現，具有以下安全特性：
+
+* 所有檔案處理和運算皆在使用者的瀏覽器中完成
+* 憑證和私鑰不會上傳至任何伺服器
+* 不會儲存任何敏感資訊
+* 使用 Web Crypto API 進行加密操作
+* 完全開源，程式碼可審查
+
 ## 功能特點
 
 * 支援上傳憑證鏈（Leaf、Intermediate、Root 憑證）
@@ -32,6 +46,26 @@
 
 ## 本地開發
 
+1. Clone 專案
+```bash
+git clone https://github.com/felaray/AppleJWSGenerator.git
+cd AppleJWSGenerator
+```
+
+2. 安裝依賴
+```bash
+npm install
+# 或
+yarn install
+```
+
+3. 啟動開發伺服器
+```bash
+npm run dev
+# 或
+yarn dev
+```
+
 在瀏覽器中開啟 `http://localhost:3000` 即可使用。
 
 ## 注意事項
@@ -40,3 +74,11 @@
 * 請確保私鑰的安全性
 * 支援的檔案格式：`.pem`、`.cert`、`.crt`、`.p8`
 * 請確保憑證鏈的完整性和正確性
+
+## 貢獻方式
+
+歡迎透過 GitHub Issues 或 Pull Requests 提供意見和改進建議。
+
+## 授權條款
+
+MIT License
